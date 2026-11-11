@@ -692,6 +692,57 @@ function dvwaPing( $target ) {  # Ping a literal IP address without a shell; fal
 // -- END (Ping)
 
 
+// Login for the Brute Force module --
+function dvwaBruteForceLogin( $user, $pass ) {  # Users row for valid credentials, or false; throttles repeated failures per account
+	global $db;
+
+	// After this many failures in a row an account is locked for the window below.
+	// The lock is kept in the database, so new sessions or cookies do not reset it.
+	$maxFailedLogins = 5;
+	$lockoutMinutes  = 15;
+
+	if( !is_string( $user ) || !is_string( $pass ) ) {
+		return false;
+	}
+
+	$data = $db->prepare( 'SELECT COALESCE( failed_login, 0 ) AS failed_login, ( last_login > NOW() - INTERVAL ' . $lockoutMinutes . ' MINUTE ) AS recent FROM users WHERE user = (:user) LIMIT 1;' );
+	$data->bindParam( ':user', $user, PDO::PARAM_STR );
+	$data->execute();
+	$account = $data->fetch();
+	if( $account === false ) {
+		return false;
+	}
+	if( $account[ 'failed_login' ] >= $maxFailedLogins ) {
+		if( $account[ 'recent' ] ) {
+			// Locked: refuse without checking the password, so guesses reveal nothing.
+			return false;
+		}
+		// The lockout window has passed: start counting again.
+		$data = $db->prepare( 'UPDATE users SET failed_login = 0 WHERE user = (:user) LIMIT 1;' );
+		$data->bindParam( ':user', $user, PDO::PARAM_STR );
+		$data->execute();
+	}
+
+	$hash = md5( $pass );
+	$data = $db->prepare( 'SELECT * FROM users WHERE user = (:user) AND password = (:password) LIMIT 1;' );
+	$data->bindParam( ':user', $user, PDO::PARAM_STR );
+	$data->bindParam( ':password', $hash, PDO::PARAM_STR );
+	$data->execute();
+	$row = $data->fetch();
+
+	if( $row !== false ) {
+		$data = $db->prepare( 'UPDATE users SET failed_login = 0 WHERE user = (:user) LIMIT 1;' );
+	}
+	else {
+		$data = $db->prepare( 'UPDATE users SET failed_login = COALESCE( failed_login, 0 ) + 1, last_login = NOW() WHERE user = (:user) LIMIT 1;' );
+	}
+	$data->bindParam( ':user', $user, PDO::PARAM_STR );
+	$data->execute();
+	return $row;
+}
+// -- END (Brute Force login)
+
+
 // Token functions --
 function checkToken( $user_token, $session_token, $returnURL ) {  # Validate the given (CSRF) token
 	global $_DVWA;

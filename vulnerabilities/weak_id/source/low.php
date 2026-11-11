@@ -3,11 +3,8 @@
 $html = "";
 
 if ($_SERVER['REQUEST_METHOD'] == "POST") {
-	if (!isset ($_SESSION['last_session_id'])) {
-		$_SESSION['last_session_id'] = 0;
-	}
-	$_SESSION['last_session_id']++;
-	$cookie_value = $_SESSION['last_session_id'];
-	setcookie("dvwaSession", $cookie_value);
+	// 160 random bits from a CSPRNG: not a counter, a timestamp or a hash of either
+	$cookie_value = bin2hex(random_bytes(20));
+	setcookie("dvwaSession", $cookie_value, array('path' => '/vulnerabilities/weak_id/', 'httponly' => true, 'samesite' => 'Lax'));
 }
 ?>

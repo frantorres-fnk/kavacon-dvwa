@@ -662,6 +662,36 @@ function dvwaUserLookup( $id, $limitOne = false ) {  # Rows (first_name, last_na
 // -- END (User lookup)
 
 
+// Ping for the Command Injection module --
+function dvwaPing( $target ) {  # Ping a literal IP address without a shell; false if the target is not an IP address
+	if( !is_string( $target ) ) {
+		return false;
+	}
+	$target = trim( $target );
+	if( filter_var( $target, FILTER_VALIDATE_IP ) === false ) {
+		return false;
+	}
+
+	// An argument array runs ping directly, so the target can never be parsed by a shell.
+	if( stristr( php_uname( 's' ), 'Windows NT' ) ) {
+		$command = array( 'ping', $target );
+	}
+	else {
+		$command = array( 'ping', '-c', '4', $target );
+	}
+	$process = proc_open( $command, array( 1 => array( 'pipe', 'w' ), 2 => array( 'pipe', 'w' ) ), $pipes );
+	if( !is_resource( $process ) ) {
+		return '';
+	}
+	$output = stream_get_contents( $pipes[ 1 ] ) . stream_get_contents( $pipes[ 2 ] );
+	fclose( $pipes[ 1 ] );
+	fclose( $pipes[ 2 ] );
+	proc_close( $process );
+	return $output;
+}
+// -- END (Ping)
+
+
 // Token functions --
 function checkToken( $user_token, $session_token, $returnURL ) {  # Validate the given (CSRF) token
 	global $_DVWA;

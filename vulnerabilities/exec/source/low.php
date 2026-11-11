@@ -4,18 +4,16 @@ if( isset( $_POST[ 'Submit' ]  ) ) {
 	// Get input
 	$target = $_REQUEST[ 'ip' ];
 
-	// Determine OS and execute the ping command.
-	if( stristr( php_uname( 's' ), 'Windows NT' ) ) {
-		// Windows
-		$cmd = shell_exec( 'ping  ' . $target );
-	}
-	else {
-		// *nix
-		$cmd = shell_exec( 'ping  -c 4 ' . $target );
-	}
+	// Only a literal IP address is accepted, and ping runs without a shell.
+	$cmd = dvwaPing( $target );
 
 	// Feedback for the end user
-	$html .= "<pre>{$cmd}</pre>";
+	if( $cmd === false ) {
+		$html .= '<pre>ERROR: You have entered an invalid IP.</pre>';
+	}
+	else {
+		$html .= '<pre>' . htmlspecialchars( $cmd ) . '</pre>';
+	}
 }
 
 ?>

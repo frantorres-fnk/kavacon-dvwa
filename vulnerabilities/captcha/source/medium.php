@@ -24,8 +24,8 @@ if( isset( $_POST[ 'Change' ] ) && ( ( $_POST[ 'step' ] ?? '' ) == '1' ) ) {
 	else {
 		// CAPTCHA was correct. Do both new passwords match?
 		if( $pass_new == $pass_conf ) {
-			// Remember on the server, not in the form, that this session passed the CAPTCHA for this password
-			$_SESSION[ 'captcha_passed_password' ] = md5( $pass_new );
+			// Remember on the server, not in the form, which user passed the CAPTCHA and for which password
+			$_SESSION[ 'captcha_passed' ] = array( 'user' => dvwaCurrentUser(), 'password' => md5( $pass_new ) );
 
 			// Show next stage for the user
 			$html .= "
@@ -47,14 +47,15 @@ if( isset( $_POST[ 'Change' ] ) && ( ( $_POST[ 'step' ] ?? '' ) == '2' ) ) {
 	// Hide the CAPTCHA form
 	$hide_form = true;
 
-	// Only a session that passed the CAPTCHA in step 1 can confirm, once, the password chosen there
-	if( !isset( $_SESSION[ 'captcha_passed_password' ] ) ) {
+	// Only the user who passed the CAPTCHA in step 1 can confirm, once, the password chosen there
+	$passed = $_SESSION[ 'captcha_passed' ] ?? null;
+	unset( $_SESSION[ 'captcha_passed' ] );
+	if( !is_array( $passed ) || $passed[ 'user' ] !== dvwaCurrentUser() ) {
 		$html     .= "<pre><br />You have not passed the CAPTCHA.</pre>";
 		$hide_form = false;
 		return;
 	}
-	$pass_new = $_SESSION[ 'captcha_passed_password' ];
-	unset( $_SESSION[ 'captcha_passed_password' ] );
+	$pass_new = $passed[ 'password' ];
 
 	// Update database
 	$current_user = dvwaCurrentUser();

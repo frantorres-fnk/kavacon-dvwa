@@ -1,18 +1,16 @@
 <?php
 
 if( isset( $_POST[ 'Upload' ] ) ) {
-	// Where are we going to be writing to?
-	$target_path  = DVWA_WEB_PAGE_TO_ROOT . "hackable/uploads/";
-	$target_path .= basename( $_FILES[ 'uploaded' ][ 'name' ] );
+	// Check the real image type, re-encode it and store it under a random name
+	$target_path = dvwaStoreUploadedImage( $_FILES[ 'uploaded' ] ?? null );
 
-	// Can we move the file to the upload folder?
-	if( !move_uploaded_file( $_FILES[ 'uploaded' ][ 'tmp_name' ], $target_path ) ) {
-		// No
-		$html .= '<pre>Your image was not uploaded.</pre>';
+	if( $target_path === false ) {
+		// Invalid file
+		$html .= '<pre>Your image was not uploaded. We can only accept JPEG or PNG images under 100 kB.</pre>';
 	}
 	else {
 		// Yes!
-		$html .= "<pre>{$target_path} succesfully uploaded!</pre>";
+		$html .= '<pre>' . htmlspecialchars( $target_path ) . ' succesfully uploaded!</pre>';
 	}
 }
 

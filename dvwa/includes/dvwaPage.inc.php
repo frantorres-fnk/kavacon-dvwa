@@ -743,6 +743,52 @@ function dvwaBruteForceLogin( $user, $pass ) {  # Users row for valid credential
 // -- END (Brute Force login)
 
 
+// Image storage for the File Upload module --
+function dvwaStoreUploadedImage( $file ) {  # Re-encode an uploaded JPEG or PNG under a random name; stored path, or false if rejected
+	$maxSize = 100000;
+
+	if( !is_array( $file ) || !isset( $file[ 'error' ], $file[ 'tmp_name' ], $file[ 'size' ], $file[ 'name' ] )
+		|| !is_string( $file[ 'name' ] ) || $file[ 'error' ] !== UPLOAD_ERR_OK || !is_uploaded_file( $file[ 'tmp_name' ] ) ) {
+		return false;
+	}
+	if( $file[ 'size' ] <= 0 || $file[ 'size' ] >= $maxSize ) {
+		return false;
+	}
+	// Only JPEG and PNG names are accepted, but the stored type comes from the content, not from the name or Content-Type.
+	$extension = strtolower( pathinfo( $file[ 'name' ], PATHINFO_EXTENSION ) );
+	if( !in_array( $extension, array( 'jpg', 'jpeg', 'png' ), true ) ) {
+		return false;
+	}
+	$info = @getimagesize( $file[ 'tmp_name' ] );
+	if( $info === false ) {
+		return false;
+	}
+	switch( $info[ 2 ] ) {
+		case IMAGETYPE_JPEG:
+			$image = @imagecreatefromjpeg( $file[ 'tmp_name' ] );
+			$storedExtension = 'jpg';
+			break;
+		case IMAGETYPE_PNG:
+			$image = @imagecreatefrompng( $file[ 'tmp_name' ] );
+			$storedExtension = 'png';
+			break;
+		default:
+			return false;
+	}
+	if( !$image ) {
+		return false;
+	}
+
+	// Re-encoding drops anything appended to or hidden in the image (such as PHP code),
+	// and the random name means the client never chooses the path or the extension.
+	$target = DVWA_WEB_PAGE_TO_ROOT . 'hackable/uploads/' . bin2hex( random_bytes( 16 ) ) . '.' . $storedExtension;
+	$stored = ( $storedExtension == 'jpg' ) ? imagejpeg( $image, $target, 90 ) : imagepng( $image, $target, 9 );
+	imagedestroy( $image );
+	return $stored ? $target : false;
+}
+// -- END (File Upload storage)
+
+
 // Token functions --
 function checkToken( $user_token, $session_token, $returnURL ) {  # Validate the given (CSRF) token
 	global $_DVWA;

@@ -625,6 +625,43 @@ function dvwaGuestbook() {
 // -- END (XSS Stored guestbook)
 
 
+// User lookup for the SQL Injection modules --
+function dvwaUserLookup( $id, $limitOne = false ) {  # Rows (first_name, last_name) for a numeric user id, using a bound parameter
+	global $_DVWA, $sqlite_db_connection;
+
+	if( !is_string( $id ) || !ctype_digit( $id ) ) {
+		return array();
+	}
+	$userId = intval( $id );
+	$query  = 'SELECT first_name, last_name FROM users WHERE user_id = ?' . ( $limitOne ? ' LIMIT 1' : '' ) . ';';
+	$rows   = array();
+
+	switch( $_DVWA[ 'SQLI_DB' ] ) {
+		case MYSQL:
+			$stmt = mysqli_prepare( $GLOBALS[ "___mysqli_ston" ], $query );
+			mysqli_stmt_bind_param( $stmt, 'i', $userId );
+			mysqli_stmt_execute( $stmt );
+			$result = mysqli_stmt_get_result( $stmt );
+			while( $row = mysqli_fetch_assoc( $result ) ) {
+				$rows[] = $row;
+			}
+			mysqli_stmt_close( $stmt );
+			break;
+		case SQLITE:
+			$stmt = $sqlite_db_connection->prepare( $query );
+			$stmt->bindValue( 1, $userId, SQLITE3_INTEGER );
+			$result = $stmt->execute();
+			while( $result && ( $row = $result->fetchArray( SQLITE3_ASSOC ) ) ) {
+				$rows[] = $row;
+			}
+			$stmt->close();
+			break;
+	}
+	return $rows;
+}
+// -- END (User lookup)
+
+
 // Token functions --
 function checkToken( $user_token, $session_token, $returnURL ) {  # Validate the given (CSRF) token
 	global $_DVWA;

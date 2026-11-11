@@ -31,6 +31,13 @@ switch( dvwaSecurityLevelGet() ) {
 
 require_once DVWA_WEB_PAGE_TO_ROOT . "vulnerabilities/fi/source/{$vulnerabilityFile}";
 
+// Only the pages shipped with this module may be included, whatever the security level.
+$allowedFiles = array( 'include.php', 'file1.php', 'file2.php', 'file3.php' );
+if( isset( $file ) && !in_array( $file, $allowedFiles, true ) ) {
+	echo "ERROR: File not found!";
+	exit;
+}
+
 // if( count( $_GET ) )
 if( isset( $file ) )
 	include( $file );
